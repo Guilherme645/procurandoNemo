@@ -4,6 +4,9 @@ import com.example.procurando.model.NoticiaDTO;
 import org.springframework.data.elasticsearch.annotations.Query;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -12,5 +15,6 @@ public interface NoticiaRepository extends ElasticsearchRepository<NoticiaDTO, S
 
     // Busca notícias cujo título ou descrição contenham o termo
     @Query("{\"bool\": {\"should\": [{\"match\": {\"title\": \"?0\"}}, {\"match\": {\"description\": \"?0\"}}]}}")
-    List<NoticiaDTO> searchByTitleOrDescription(String termo);
+    Page<NoticiaDTO> searchByTitleOrDescription(String termo, Pageable pageable);
 }
+

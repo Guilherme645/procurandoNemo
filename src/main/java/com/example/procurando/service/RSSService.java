@@ -23,6 +23,12 @@ public class RSSService {
     @Autowired
     private NoticiaRepository noticiaRepository;
 
+    /**
+     * Método principal para processar os feeds RSS e salvar no Elasticsearch.
+     *
+     * @param termo O termo para filtro (opcional).
+     * @return Lista de notícias processadas.
+     */
     public List<NoticiaDTO> processarFeedsESalvarNoElasticsearch(String termo) {
         List<NoticiaDTO> todasNoticias = new ArrayList<>();
 
@@ -42,15 +48,17 @@ public class RSSService {
 
                 // Iterar sobre os itens e extrair os dados
                 for (Element item : items) {
-                    String title = item.selectFirst("title").text();
-                    String link = item.selectFirst("link").text();
-                    String description = item.selectFirst("description").text();
-                    String pubDate = item.selectFirst("pubDate").text();
+                    String title = limparHtml(item.selectFirst("title").text());
+                    String link = limparHtml(item.selectFirst("link").text());
+                    String description = limparHtml(item.selectFirst("description").text());
+                    String pubDate = limparHtml(item.selectFirst("pubDate").text());
 
                     // Filtrar por termo (caso fornecido)
                     if (termo == null || termo.isEmpty() || title.contains(termo) || description.contains(termo)) {
                         // Criar um objeto para armazenar os dados da notícia
-                        NoticiaDTO noticia = new NoticiaDTO(title, link, description, pubDate);
+                        String sourceUrl = rssUrl.getUrl(); // Define o sourceUrl como a URL do feed RSS
+
+                        NoticiaDTO noticia = new NoticiaDTO(title, link, description, pubDate, sourceUrl);
 
                         // Salvar no Elasticsearch
                         noticiaRepository.save(noticia);
@@ -66,5 +74,18 @@ public class RSSService {
         }
 
         return todasNoticias; // Retorna todas as notícias processadas e salvas
+    }
+
+    /**
+     * Método para limpar código HTML e retornar apenas texto puro.
+     *
+     * @param texto O texto contendo HTML.
+     * @return Texto limpo (sem tags HTML).
+     */
+    private String limparHtml(String texto) {
+        if (texto == null || texto.isEmpty()) {
+            return texto; // Retorna o texto vazio ou nulo se for o caso
+        }
+        return Jsoup.parse(texto).text(); // Remove todas as tags HTML e retorna o texto puro
     }
 }

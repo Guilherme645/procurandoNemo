@@ -12,14 +12,16 @@ public class NoticiaDTO {
     private String link;
     private String description;
     private String pubDate;
+    private String sourceUrl; // Campo sourceUrl adicionado corretamente
 
     // Construtor
-    public NoticiaDTO(String title, String link, String description, String pubDate) {
+    public NoticiaDTO(String title, String link, String description, String pubDate, String sourceUrl) {
         this.id = link; // Definindo o link como identificador único
         this.title = title;
         this.link = link;
         this.description = description;
         this.pubDate = pubDate;
+        this.sourceUrl = sourceUrl;
     }
 
     // Getters e Setters
@@ -61,5 +63,13 @@ public class NoticiaDTO {
 
     public void setPubDate(String pubDate) {
         this.pubDate = pubDate;
+    }
+
+    public String getSourceUrl() {
+        return sourceUrl;
+    }
+
+    public void setSourceUrl(String sourceUrl) {
+        this.sourceUrl = sourceUrl;
     }
 }

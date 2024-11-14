@@ -16,8 +16,12 @@ public class NoticiaController {
     private NoticiaService noticiaService;
 
     @GetMapping("/buscar")
-    public List<NoticiaDTO> buscarNoticias(@RequestParam(required = false) String termo) {
-        // Chama o serviço para buscar notícias no Elasticsearch
-        return noticiaService.buscarNoticiasPorTermo(termo);
+    public List<?> buscarNoticias(
+            @RequestParam(required = false) String termo,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "false") boolean removerHtml) {
+        return noticiaService.buscarNoticiasPorTermo(termo, page, size, removerHtml);
     }
 }
+
