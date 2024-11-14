@@ -5,7 +5,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "rss_urls") // Indica o nome correto da tabela no banco de dados
+@Table(name = "rss_urls")
 public class RSSUrl {
 
     @Id

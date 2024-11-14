@@ -7,7 +7,7 @@ import org.springframework.data.elasticsearch.annotations.Document;
 public class NoticiaDTO {
 
     @Id
-    private String id; // Campo para o identificador único
+    private String id;
     private String title;
     private String link;
     private String description;
@@ -20,7 +20,6 @@ public class NoticiaDTO {
         this.link = link;
         this.description = description;
         this.pubDate = pubDate;
-
     }
 
     // Getters e Setters

@@ -15,10 +15,9 @@ public class NoticiaController {
     @Autowired
     private NoticiaService noticiaService;
 
-    @GetMapping("/buscar-noticias")
+    @GetMapping("/buscar")
     public List<NoticiaDTO> buscarNoticias(@RequestParam(required = false) String termo) {
         // Chama o serviço para buscar notícias no Elasticsearch
         return noticiaService.buscarNoticiasPorTermo(termo);
-
     }
 }
