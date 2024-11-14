@@ -6,8 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @RestController
 public class NoticiaController {
@@ -15,13 +15,20 @@ public class NoticiaController {
     @Autowired
     private NoticiaService noticiaService;
 
+    // Endpoint para buscar notícias por termo (título ou descrição)
     @GetMapping("/buscar")
-    public List<?> buscarNoticias(
-            @RequestParam(required = false) String termo,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "false") boolean removerHtml) {
-        return noticiaService.buscarNoticiasPorTermo(termo, page, size, removerHtml);
+    public Page<NoticiaDTO> buscarNoticias(@RequestParam(required = false) String termo, Pageable pageable) {
+        if (termo != null && !termo.isEmpty()) {
+            return noticiaService.buscarNoticiasPorTermo(termo, pageable);
+        } else {
+            // Retorna uma página vazia ou uma resposta diferente, dependendo do seu caso
+            return Page.empty();
+        }
+    }
+
+    // Endpoint para buscar notícias por termo e categoria (sourceUrl)
+    @GetMapping("/buscarPorCategoria")
+    public Page<NoticiaDTO> buscarNoticiasPorCategoria(@RequestParam String termo, @RequestParam String categoria, Pageable pageable) {
+        return noticiaService.buscarNoticiasPorTermoECategoria(termo, categoria, pageable);
     }
 }
-

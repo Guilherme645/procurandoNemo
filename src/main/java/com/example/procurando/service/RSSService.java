@@ -9,6 +9,9 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -24,12 +27,15 @@ public class RSSService {
     private NoticiaRepository noticiaRepository;
 
     /**
-     * Método principal para processar os feeds RSS e salvar no Elasticsearch.
+     * Método principal para processar os feeds RSS, salvar no Elasticsearch e realizar busca.
      *
      * @param termo O termo para filtro (opcional).
+     * @param categoria A categoria para filtro (opcional).
+     * @param page Número da página para a paginação.
+     * @param size Tamanho da página para a paginação.
      * @return Lista de notícias processadas.
      */
-    public List<NoticiaDTO> processarFeedsESalvarNoElasticsearch(String termo) {
+    public List<NoticiaDTO> processarFeedsESalvarNoElasticsearch(String termo, String categoria, int page, int size) {
         List<NoticiaDTO> todasNoticias = new ArrayList<>();
 
         // Buscar todas as URLs no banco
@@ -73,7 +79,29 @@ public class RSSService {
             }
         }
 
-        return todasNoticias; // Retorna todas as notícias processadas e salvas
+        // Realizar a busca no Elasticsearch
+        List<NoticiaDTO> noticiasFiltradas = buscarNoticiasPorTermoECategoria(termo, categoria, page, size);
+
+        return noticiasFiltradas; // Retorna as notícias filtradas e processadas
+    }
+
+    /**
+     * Método para realizar a busca no Elasticsearch com filtro por termo e categoria.
+     *
+     * @param termo O termo para busca (título ou descrição).
+     * @param categoria A categoria para filtro (sourceUrl).
+     * @param page Número da página para a paginação.
+     * @param size Tamanho da página para a paginação.
+     * @return Lista de notícias encontradas.
+     */
+    private List<NoticiaDTO> buscarNoticiasPorTermoECategoria(String termo, String categoria, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        // Realizar a busca no Elasticsearch
+        Page<NoticiaDTO> resultadoBusca = noticiaRepository.searchByTitleOrDescriptionAndCategory(termo, categoria, pageable);
+
+        // Retornar as notícias encontradas
+        return resultadoBusca.getContent();
     }
 
     /**
