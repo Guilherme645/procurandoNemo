@@ -8,17 +8,17 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class RSSService {
+
+    private static final Logger logger = LoggerFactory.getLogger(RSSService.class);
 
     @Autowired
     private RSSUrlRepository rssUrlRepository;
@@ -26,94 +26,69 @@ public class RSSService {
     @Autowired
     private NoticiaRepository noticiaRepository;
 
-    /**
-     * Método principal para processar os feeds RSS, salvar no Elasticsearch e realizar busca.
-     *
-     * @param termo O termo para filtro (opcional).
-     * @param categoria A categoria para filtro (opcional).
-     * @param page Número da página para a paginação.
-     * @param size Tamanho da página para a paginação.
-     * @return Lista de notícias processadas.
-     */
-    public List<NoticiaDTO> processarFeedsESalvarNoElasticsearch(String termo, String categoria, int page, int size) {
-        List<NoticiaDTO> todasNoticias = new ArrayList<>();
-
-        // Buscar todas as URLs no banco
+    public void processarTodosFeedsESalvarNoElasticsearch() {
+        // Obter todas as URLs e categorias da tabela rss_urls
         List<RSSUrl> rssUrls = rssUrlRepository.findAll();
 
-        // Iterar sobre cada URL e processar os feeds
+        if (rssUrls.isEmpty()) {
+            logger.warn("Nenhuma URL encontrada na tabela rss_urls.");
+            return;
+        }
+
         for (RSSUrl rssUrl : rssUrls) {
             try {
-                System.out.println("Processando feed: " + rssUrl.getUrl());
+                logger.info("Processando feed: {}", rssUrl.getUrl());
 
-                // Baixar e parsear o feed RSS
-                Document doc = Jsoup.connect(rssUrl.getUrl()).get();
+                // Fazer o download e parse do RSS
+                Document doc = Jsoup.connect(rssUrl.getUrl())
+                        .timeout(10000) // Timeout de 10 segundos
+                        .get();
 
-                // Selecionar itens <item>
                 Elements items = doc.select("item");
 
-                // Iterar sobre os itens e extrair os dados
-                for (Element item : items) {
-                    String title = limparHtml(item.selectFirst("title").text());
-                    String link = limparHtml(item.selectFirst("link").text());
-                    String description = limparHtml(item.selectFirst("description").text());
-                    String pubDate = limparHtml(item.selectFirst("pubDate").text());
-
-                    // Filtrar por termo (caso fornecido)
-                    if (termo == null || termo.isEmpty() || title.contains(termo) || description.contains(termo)) {
-                        // Criar um objeto para armazenar os dados da notícia
-                        String sourceUrl = rssUrl.getUrl(); // Define o sourceUrl como a URL do feed RSS
-
-                        NoticiaDTO noticia = new NoticiaDTO(title, link, description, pubDate, sourceUrl);
-
-                        // Salvar no Elasticsearch
-                        noticiaRepository.save(noticia);
-
-                        // Adicionar à lista de todas as notícias retornadas
-                        todasNoticias.add(noticia);
-                    }
+                if (items.isEmpty()) {
+                    logger.warn("Nenhum item encontrado no feed: {}", rssUrl.getUrl());
+                    continue;
                 }
+
+                // Iterar sobre os itens do feed
+                for (Element item : items) {
+                    String title = safeSelectText(item, "title");
+                    String link = safeSelectText(item, "link");
+                    String description = safeSelectText(item, "description");
+                    String pubDate = safeSelectText(item, "pubDate");
+
+                    // Criar o objeto de notícia
+                    NoticiaDTO noticia = new NoticiaDTO(
+                            title,
+                            link,
+                            limparHtml(description),
+                            pubDate,
+                            rssUrl.getCategoria() // Associar a categoria do feed
+                    );
+
+                    // Salvar no Elasticsearch
+                    noticiaRepository.save(noticia);
+                    logger.info("Notícia '{}' salva com sucesso no Elasticsearch.", title);
+                }
+
             } catch (Exception e) {
-                System.err.println("Erro ao processar feed: " + rssUrl.getUrl());
-                e.printStackTrace();
+                logger.error("Erro ao processar feed: {}", rssUrl.getUrl(), e);
             }
         }
-
-        // Realizar a busca no Elasticsearch
-        List<NoticiaDTO> noticiasFiltradas = buscarNoticiasPorTermoECategoria(termo, categoria, page, size);
-
-        return noticiasFiltradas; // Retorna as notícias filtradas e processadas
     }
 
-    /**
-     * Método para realizar a busca no Elasticsearch com filtro por termo e categoria.
-     *
-     * @param termo O termo para busca (título ou descrição).
-     * @param categoria A categoria para filtro (sourceUrl).
-     * @param page Número da página para a paginação.
-     * @param size Tamanho da página para a paginação.
-     * @return Lista de notícias encontradas.
-     */
-    private List<NoticiaDTO> buscarNoticiasPorTermoECategoria(String termo, String categoria, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-
-        // Realizar a busca no Elasticsearch
-        Page<NoticiaDTO> resultadoBusca = noticiaRepository.searchByTitleOrDescriptionAndCategory(termo, categoria, pageable);
-
-        // Retornar as notícias encontradas
-        return resultadoBusca.getContent();
-    }
-
-    /**
-     * Método para limpar código HTML e retornar apenas texto puro.
-     *
-     * @param texto O texto contendo HTML.
-     * @return Texto limpo (sem tags HTML).
-     */
+    // Método para limpar HTML das descrições
     private String limparHtml(String texto) {
         if (texto == null || texto.isEmpty()) {
-            return texto; // Retorna o texto vazio ou nulo se for o caso
+            return texto;
         }
-        return Jsoup.parse(texto).text(); // Remove todas as tags HTML e retorna o texto puro
+        return Jsoup.parse(texto).text();
+    }
+
+    // Método auxiliar para selecionar e validar elementos
+    private String safeSelectText(Element element, String tag) {
+        Element selectedElement = element.selectFirst(tag);
+        return selectedElement != null ? selectedElement.text() : "";
     }
 }

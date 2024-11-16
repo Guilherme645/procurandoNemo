@@ -3,25 +3,29 @@ package com.example.procurando.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 
-@Document(indexName = "noticias") // Nome do índice no Elasticsearch
+@Document(indexName = "noticias")
 public class NoticiaDTO {
 
     @Id
     private String id;
+
     private String title;
     private String link;
     private String description;
     private String pubDate;
-    private String sourceUrl; // Campo sourceUrl adicionado corretamente
+    private String categoria;
 
-    // Construtor
-    public NoticiaDTO(String title, String link, String description, String pubDate, String sourceUrl) {
-        this.id = link; // Definindo o link como identificador único
+    // Construtor padrão
+    public NoticiaDTO() {
+    }
+
+    // Construtor com parâmetros
+    public NoticiaDTO(String title, String link, String description, String pubDate, String categoria) {
         this.title = title;
         this.link = link;
         this.description = description;
         this.pubDate = pubDate;
-        this.sourceUrl = sourceUrl;
+        this.categoria = categoria;
     }
 
     // Getters e Setters
@@ -65,11 +69,11 @@ public class NoticiaDTO {
         this.pubDate = pubDate;
     }
 
-    public String getSourceUrl() {
-        return sourceUrl;
+    public String getCategoria() {
+        return categoria;
     }
 
-    public void setSourceUrl(String sourceUrl) {
-        this.sourceUrl = sourceUrl;
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
     }
 }
