@@ -4,10 +4,13 @@ import com.example.procurando.service.RSSService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
+@RequestMapping("/noticias")
 public class RSSController {
 
     private static final Logger logger = LoggerFactory.getLogger(RSSController.class);
@@ -29,6 +32,27 @@ public class RSSController {
         } catch (Exception e) {
             logger.error("Erro ao processar feeds: ", e);
             return "Erro: Ocorreu um problema ao processar os feeds. Consulte os logs para mais detalhes.";
+        }
+    }
+    @PostMapping("/adicionar-feed")
+    public ResponseEntity<String> adicionarFeed(@RequestBody Map<String, String> body) {
+        String url = body.get("url");
+        String categorias = body.get("categorias");
+
+        if (url == null || categorias == null) {
+            return ResponseEntity.badRequest().body("Os campos 'url' e 'categorias' são obrigatórios.");
+        }
+
+        try {
+            // Adicionar o feed RSS ao banco de dados
+            rssService.adicionarFeedRss(url, categorias);
+
+            // Processar o feed para salvar no Elasticsearch
+            rssService.processarFeedEspecifico(url);
+
+            return ResponseEntity.ok("Feed adicionado e processado com sucesso!");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Erro ao adicionar feed: " + e.getMessage());
         }
     }
 }

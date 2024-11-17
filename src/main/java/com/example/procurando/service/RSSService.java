@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class RSSService {
@@ -91,4 +92,55 @@ public class RSSService {
         Element selectedElement = element.selectFirst(tag);
         return selectedElement != null ? selectedElement.text() : "";
     }
+
+    public void adicionarFeedRss(String url, String categorias) {
+        // Criar e salvar o feed no banco de dados
+        RSSUrl rssUrl = new RSSUrl();
+        rssUrl.setId(UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE); // Gera um ID único manualmente
+        rssUrl.setUrl(url);
+        rssUrl.setCategoria(categorias);
+        rssUrlRepository.save(rssUrl);
+    }
+
+    /**
+     * Processa um feed RSS específico.
+     * @param url A URL do feed RSS a ser processado.
+     */
+    public void processarFeedEspecifico(String url) {
+        try {
+            Document doc = Jsoup.connect(url)
+                    .timeout(10000) // Timeout de 10 segundos
+                    .get();
+
+            Elements items = doc.select("item");
+
+            if (items.isEmpty()) {
+                logger.warn("Nenhum item encontrado no feed: {}", url);
+                return;
+            }
+
+            for (Element item : items) {
+                String title = safeSelectText(item, "title");
+                String link = safeSelectText(item, "link");
+                String description = safeSelectText(item, "description");
+                String pubDate = safeSelectText(item, "pubDate");
+
+                // Criar o objeto de notícia
+                NoticiaDTO noticia = new NoticiaDTO(
+                        title,
+                        link,
+                        limparHtml(description),
+                        pubDate,
+                        "Categoria do Feed" // Pode ser extraída do RSSUrl, se necessário
+                );
+
+                // Salvar no Elasticsearch
+                noticiaRepository.save(noticia);
+                logger.info("Notícia '{}' salva com sucesso no Elasticsearch.", title);
+            }
+        } catch (Exception e) {
+            logger.error("Erro ao processar feed: {}", url, e);
+        }
+    }
 }
+

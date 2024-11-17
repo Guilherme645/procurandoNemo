@@ -25,5 +25,6 @@ public class NoticiaController {
             Pageable pageable) {
         return noticiaService.buscarNoticiasPorTermoECategoria(termo, categoria, pageable);
     }
+
 }
 
