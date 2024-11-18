@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,7 +29,6 @@ public class RSSService {
     private NoticiaRepository noticiaRepository;
 
     public void processarTodosFeedsESalvarNoElasticsearch() {
-        // Obter todas as URLs e categorias da tabela rss_urls
         List<RSSUrl> rssUrls = rssUrlRepository.findAll();
 
         if (rssUrls.isEmpty()) {
@@ -40,9 +40,8 @@ public class RSSService {
             try {
                 logger.info("Processando feed: {}", rssUrl.getUrl());
 
-                // Fazer o download e parse do RSS
                 Document doc = Jsoup.connect(rssUrl.getUrl())
-                        .timeout(10000) // Timeout de 10 segundos
+                        .timeout(10000)
                         .get();
 
                 Elements items = doc.select("item");
@@ -52,34 +51,36 @@ public class RSSService {
                     continue;
                 }
 
-                // Iterar sobre os itens do feed
                 for (Element item : items) {
                     String title = safeSelectText(item, "title");
                     String link = safeSelectText(item, "link");
                     String description = safeSelectText(item, "description");
                     String pubDate = safeSelectText(item, "pubDate");
+                    String categoria = rssUrl.getCategoria();
+                    String faviconUrl = gerarFaviconUrl(link);
+                    String sourceUrl = extrairSourceUrl(link);
 
-                    // Criar o objeto de notícia
+                    // Criar objeto NoticiaDTO
                     NoticiaDTO noticia = new NoticiaDTO(
                             title,
                             link,
                             limparHtml(description),
                             pubDate,
-                            rssUrl.getCategoria() // Associar a categoria do feed
+                            categoria,
+                            faviconUrl,
+                            sourceUrl
                     );
 
                     // Salvar no Elasticsearch
                     noticiaRepository.save(noticia);
                     logger.info("Notícia '{}' salva com sucesso no Elasticsearch.", title);
                 }
-
             } catch (Exception e) {
                 logger.error("Erro ao processar feed: {}", rssUrl.getUrl(), e);
             }
         }
     }
 
-    // Método para limpar HTML das descrições
     private String limparHtml(String texto) {
         if (texto == null || texto.isEmpty()) {
             return texto;
@@ -87,29 +88,41 @@ public class RSSService {
         return Jsoup.parse(texto).text();
     }
 
-    // Método auxiliar para selecionar e validar elementos
+    private String gerarFaviconUrl(String link) {
+        try {
+            URI uri = new URI(link);
+            return uri.getScheme() + "://" + uri.getHost() + "/favicon.ico";
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String extrairSourceUrl(String link) {
+        try {
+            URI uri = new URI(link);
+            return uri.getScheme() + "://" + uri.getHost();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private String safeSelectText(Element element, String tag) {
         Element selectedElement = element.selectFirst(tag);
         return selectedElement != null ? selectedElement.text() : "";
     }
 
     public void adicionarFeedRss(String url, String categorias) {
-        // Criar e salvar o feed no banco de dados
         RSSUrl rssUrl = new RSSUrl();
-        rssUrl.setId(UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE); // Gera um ID único manualmente
+        rssUrl.setId(UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE);
         rssUrl.setUrl(url);
         rssUrl.setCategoria(categorias);
         rssUrlRepository.save(rssUrl);
     }
 
-    /**
-     * Processa um feed RSS específico.
-     * @param url A URL do feed RSS a ser processado.
-     */
     public void processarFeedEspecifico(String url) {
         try {
             Document doc = Jsoup.connect(url)
-                    .timeout(10000) // Timeout de 10 segundos
+                    .timeout(10000)
                     .get();
 
             Elements items = doc.select("item");
@@ -124,14 +137,18 @@ public class RSSService {
                 String link = safeSelectText(item, "link");
                 String description = safeSelectText(item, "description");
                 String pubDate = safeSelectText(item, "pubDate");
+                String faviconUrl = gerarFaviconUrl(link);
+                String sourceUrl = extrairSourceUrl(link);
 
-                // Criar o objeto de notícia
+                // Criar objeto NoticiaDTO
                 NoticiaDTO noticia = new NoticiaDTO(
                         title,
                         link,
                         limparHtml(description),
                         pubDate,
-                        "Categoria do Feed" // Pode ser extraída do RSSUrl, se necessário
+                        "Categoria do Feed",
+                        faviconUrl,
+                        sourceUrl
                 );
 
                 // Salvar no Elasticsearch
@@ -143,4 +160,3 @@ public class RSSService {
         }
     }
 }
-

@@ -14,18 +14,22 @@ public class NoticiaDTO {
     private String description;
     private String pubDate;
     private String categoria;
+    private String faviconUrl;
+    private String sourceUrl;
 
     // Construtor padrão
     public NoticiaDTO() {
     }
 
     // Construtor com parâmetros
-    public NoticiaDTO(String title, String link, String description, String pubDate, String categoria) {
+    public NoticiaDTO(String title, String link, String description, String pubDate, String categoria, String faviconUrl, String sourceUrl) {
         this.title = title;
         this.link = link;
         this.description = description;
         this.pubDate = pubDate;
         this.categoria = categoria;
+        this.faviconUrl = faviconUrl;
+        this.sourceUrl = sourceUrl;
     }
 
     // Getters e Setters
@@ -75,5 +79,21 @@ public class NoticiaDTO {
 
     public void setCategoria(String categoria) {
         this.categoria = categoria;
+    }
+
+    public String getFaviconUrl() {
+        return faviconUrl;
+    }
+
+    public void setFaviconUrl(String faviconUrl) {
+        this.faviconUrl = faviconUrl;
+    }
+
+    public String getSourceUrl() {
+        return sourceUrl;
+    }
+
+    public void setSourceUrl(String sourceUrl) {
+        this.sourceUrl = sourceUrl;
     }
 }
