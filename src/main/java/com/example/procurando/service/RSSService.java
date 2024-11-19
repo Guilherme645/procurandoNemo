@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
 
 import java.net.URI;
 import java.util.List;
@@ -23,10 +24,13 @@ public class RSSService {
     private static final Logger logger = LoggerFactory.getLogger(RSSService.class);
 
     @Autowired
-    private RSSUrlRepository rssUrlRepository;
+    private ElasticsearchClient elasticsearchClient;
 
     @Autowired
     private NoticiaRepository noticiaRepository;
+
+    @Autowired
+    private RSSUrlRepository rssUrlRepository;
 
     public void processarTodosFeedsESalvarNoElasticsearch() {
         List<RSSUrl> rssUrls = rssUrlRepository.findAll();
@@ -119,6 +123,15 @@ public class RSSService {
         rssUrlRepository.save(rssUrl);
     }
 
+    public void refreshIndiceElasticsearch() {
+        try {
+            elasticsearchClient.indices().refresh(r -> r.index("noticias"));
+            logger.info("Índice 'noticias' atualizado com sucesso.");
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar o índice 'noticias': ", e);
+        }
+    }
+
     public void processarFeedEspecifico(String url) {
         try {
             Document doc = Jsoup.connect(url)
@@ -129,6 +142,13 @@ public class RSSService {
 
             if (items.isEmpty()) {
                 logger.warn("Nenhum item encontrado no feed: {}", url);
+                return;
+            }
+
+            // Buscar a categoria associada ao feed
+            RSSUrl rssUrl = rssUrlRepository.findByUrl(url);
+            if (rssUrl == null) {
+                logger.error("Feed não encontrado no banco de dados para a URL: {}", url);
                 return;
             }
 
@@ -146,17 +166,19 @@ public class RSSService {
                         link,
                         limparHtml(description),
                         pubDate,
-                        "Categoria do Feed",
+                        rssUrl.getCategoria(), // Usar a categoria do banco
                         faviconUrl,
                         sourceUrl
                 );
 
-                // Salvar no Elasticsearch
+                // Salvar a notícia no Elasticsearch
                 noticiaRepository.save(noticia);
                 logger.info("Notícia '{}' salva com sucesso no Elasticsearch.", title);
             }
+
         } catch (Exception e) {
             logger.error("Erro ao processar feed: {}", url, e);
         }
     }
+
 }

@@ -23,7 +23,7 @@ public class RSSController {
     private RSSService rssService;
 
     @Autowired
-    private RSSUrlRepository rssUrlRepository; // Certifique-se de usar @Autowired para injetar o repositório corretamente
+    private RSSUrlRepository rssUrlRepository;
 
     @GetMapping("/processarFeeds")
     public String processarFeeds() {
@@ -68,8 +68,11 @@ public class RSSController {
             // Adicionar o feed RSS ao banco de dados
             rssService.adicionarFeedRss(url, categorias);
 
-            // Processar o feed para salvar no Elasticsearch
+            // Processar o feed específico
             rssService.processarFeedEspecifico(url);
+
+            // Forçar refresh no índice do Elasticsearch
+            rssService.refreshIndiceElasticsearch();
 
             return ResponseEntity.ok("Feed adicionado e processado com sucesso!");
         } catch (Exception e) {
