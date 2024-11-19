@@ -1,5 +1,7 @@
 package com.example.procurando.controller;
 
+import com.example.procurando.model.RSSUrl;
+import com.example.procurando.repository.RSSUrlRepository;
 import com.example.procurando.service.RSSService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,7 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/noticias")
@@ -17,6 +21,9 @@ public class RSSController {
 
     @Autowired
     private RSSService rssService;
+
+    @Autowired
+    private RSSUrlRepository rssUrlRepository; // Certifique-se de usar @Autowired para injetar o repositório corretamente
 
     @GetMapping("/processarFeeds")
     public String processarFeeds() {
@@ -34,6 +41,20 @@ public class RSSController {
             return "Erro: Ocorreu um problema ao processar os feeds. Consulte os logs para mais detalhes.";
         }
     }
+
+    @GetMapping("/categorias")
+    public List<String> getCategorias() {
+        try {
+            return rssUrlRepository.findAll().stream()
+                    .map(RSSUrl::getCategoria)
+                    .distinct()
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            logger.error("Erro ao buscar categorias: ", e);
+            throw new RuntimeException("Erro ao buscar categorias: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/adicionar-feed")
     public ResponseEntity<String> adicionarFeed(@RequestBody Map<String, String> body) {
         String url = body.get("url");
@@ -52,6 +73,7 @@ public class RSSController {
 
             return ResponseEntity.ok("Feed adicionado e processado com sucesso!");
         } catch (Exception e) {
+            logger.error("Erro ao adicionar feed: ", e);
             return ResponseEntity.status(500).body("Erro ao adicionar feed: " + e.getMessage());
         }
     }

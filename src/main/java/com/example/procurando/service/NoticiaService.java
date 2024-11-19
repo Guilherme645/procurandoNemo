@@ -14,14 +14,28 @@ public class NoticiaService {
     @Autowired
     private NoticiaRepository noticiaRepository;
 
+    /**
+     * Busca notícias por termo, categoria, faviconUrl e sourceUrl, incluindo paginação.
+     *
+     * @param termo     Termo de busca no título, descrição, faviconUrl ou sourceUrl.
+     * @param categoria Categoria para filtrar os resultados.
+     * @param pageable  Parâmetros de paginação.
+     * @return Página contendo as notícias encontradas.
+     */
     public Page<NoticiaDTO> buscarNoticiasPorTermoECategoria(String termo, String categoria, Pageable pageable) {
+        Page<NoticiaDTO> noticias;
+
         if (categoria != null && !categoria.isEmpty()) {
-            // Busca por termo e categoria
-            return noticiaRepository.findByTitleContainingAndCategoriaOrDescriptionContainingAndCategoria(
-                    termo, categoria, termo, categoria, pageable);
+            // Busca por termo, categoria e outros campos
+            noticias = noticiaRepository.findByTitleContainingAndCategoriaOrDescriptionContainingAndCategoriaOrFaviconUrlContainingAndCategoriaOrSourceUrlContainingAndCategoria(
+                    termo, categoria, termo, categoria, termo, categoria, termo, categoria, pageable);
         } else {
-            // Busca somente por termo
-            return noticiaRepository.findByTitleContainingOrDescriptionContaining(termo, termo, pageable);
+            // Busca somente por termo nos campos relevantes
+            noticias = noticiaRepository.findByTitleContainingOrDescriptionContainingOrFaviconUrlContainingOrSourceUrlContaining(
+                    termo, termo, termo, termo, pageable);
         }
+
+        // Retornar todas as notícias encontradas com os campos já disponíveis no documento
+        return noticias;
     }
 }
